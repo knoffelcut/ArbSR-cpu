@@ -5,7 +5,7 @@ Pytorch implementation of "Learning A Single Network for Scale-Arbitrary Super-R
 [[Project]](https://longguangwang.github.io/Project/ArbSR/) [[arXiv]](https://arxiv.org/abs/2004.03791) [[Replicate Demo and Docker Image]](https://replicate.ai/longguangwang/arbsr)
 
 ## Highlights
-- ***A plug-in module*** to extend a baseline SR network (e.g., EDSR and RCAN) to a scale-arbitrary SR network with ***small additional computational and memory cost***. 
+- ***A plug-in module*** to extend a baseline SR network (e.g., EDSR and RCAN) to a scale-arbitrary SR network with ***small additional computational and memory cost***.
 - Promising results for ***scale-arbitrary SR (both non-integer and asymmetric scale factors)*** while maintaining the state-of-the-art performance for SR with integer scale factors.
 
 ## Demo
@@ -22,12 +22,13 @@ Although recent CNN-based single image SR networks (e.g., EDSR, RDN and RCAN) ha
 - Python 3.6
 - PyTorch == 1.1.0
 - numpy
-- skimage
+- scikit-image
 - imageio
 - cv2
+- matplotlib
 
 ## Train
-### 1. Prepare training data 
+### 1. Prepare training data
 
 1.1 Download DIV2K training data (800 training images) from [DIV2K dataset](https://data.vision.ee.ethz.ch/cvl/DIV2K/) or [SNU_CVLab](https://cv.snu.ac.kr/research/EDSR/DIV2K.tar).
 
@@ -56,7 +57,7 @@ Run `./main.sh` to train on the DIV2K dataset. Please update `dir_data` in the b
 
 
 ## Test
-### 1. Prepare test data 
+### 1. Prepare test data
 
 1.1 Download [benchmark datasets](https://github.com/xinntao/BasicSR/blob/a19aac61b277f64be050cef7fe578a121d944a0e/docs/Datasets.md) (e.g., Set5, Set14 and other test sets).
 

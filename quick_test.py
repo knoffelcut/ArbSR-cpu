@@ -1,6 +1,6 @@
 import torch
 import utility
-import scipy.misc as misc
+import skimage.io
 from option import args
 from model.arbrcan import ArbRCAN
 import imageio
@@ -38,4 +38,4 @@ if __name__ == '__main__':
         sr = sr.data.mul(255 / args.rgb_range)
         sr = sr[0, ...].permute(1, 2, 0).cpu().numpy()
         filename = 'experiment/quick_test/results/{}x{}'.format(int(args.sr_size[0]), int(args.sr_size[1]))
-        misc.imsave('{}.png'.format(filename), sr)
+        skimage.io.imsave('{}.png'.format(filename), sr)
