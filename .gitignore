@@ -1,4 +1,5 @@
-.venv/**
+.venv
 *.onnx
 *.pyc
 experiment/quick_test
+.vscode
