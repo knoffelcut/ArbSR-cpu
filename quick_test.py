@@ -25,14 +25,25 @@ if __name__ == '__main__':
 
     # model is trained on scale factors in range [1, 4]
     # one can also try out-of-distribution scale factors but the results may be not very promising
-    assert args.sr_size[0] / lr.size(2) > 1 and args.sr_size[0] / lr.size(2) <= 4
-    assert args.sr_size[1] / lr.size(3) > 1 and args.sr_size[1] / lr.size(3) <= 4
+    assert args.sr_size[0] / lr.size(2) > 1 and args.sr_size[0] / lr.size(2) <= 4, (args.sr_size[0], lr.size(2), args.sr_size[0] / lr.size(2))
+    assert args.sr_size[1] / lr.size(3) > 1 and args.sr_size[1] / lr.size(3) <= 4, (args.sr_size[0], lr.size(3), args.sr_size[1] / lr.size(3))
 
     with torch.no_grad():
         scale = args.sr_size[0] / lr.size(2)
         scale2 = args.sr_size[1] / lr.size(3)
-        model.set_scale(scale, scale2)
-        sr = model(lr)
+        sr = model(lr, torch.tensor(scale).float(), torch.tensor(scale2).float(), torch.tensor(1).int(), torch.tensor(lr.shape[2]).int(), torch.tensor(lr.shape[3]).int())
+
+        # TODO Correct Dynamic Axes
+        torch.onnx.export(model,               # model being run
+            (lr, torch.tensor(scale).float(), torch.tensor(scale2).float(), torch.tensor(1).int(), torch.tensor(lr.shape[2]).int(), torch.tensor(lr.shape[3]).int()),       # model input (or a tuple for multiple inputs)
+            "abrsr.onnx",   # where to save the model (can be a file or file-like object)
+            export_params=True,        # store the trained parameter weights inside the model file
+            opset_version=16,          # the ONNX version to export the model to
+            do_constant_folding=True,  # whether to execute constant folding for optimization
+            input_names = ['input', 'scale', 'b', 'h', 'w'],   # the model's input names
+            output_names = ['output'], # the model's output names
+            dynamic_axes={'input' : {0 : 'batch_size'},    # variable length axes
+                        'output' : {0 : 'batch_size'}})
 
         sr = utility.quantize(sr, args.rgb_range)
         sr = sr.data.mul(255 / args.rgb_range)

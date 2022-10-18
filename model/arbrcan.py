@@ -1,7 +1,6 @@
 from model import common
 import torch.nn as nn
 import torch
-import numpy as np
 import torch.nn.functional as F
 import math
 
@@ -102,24 +101,23 @@ class SA_upsample(nn.Module):
         # offset head
         self.offset = nn.Conv2d(64, 2, 1, 1, 0, bias=True)
 
-    def forward(self, x, scale, scale2):
-        b, c, h, w = x.size()
-
+    def forward(self, x, scale, scale2, b, h, w):
         # (1) coordinates in LR space
         ## coordinates in HR space
-        coor_hr = [torch.arange(0, round(h * scale), 1).unsqueeze(0).float().to(x.device),
-                   torch.arange(0, round(w * scale2), 1).unsqueeze(0).float().to(x.device)]
+
+        coor_hr_h = torch.arange(0, torch.round(h * scale).int(), 1).unsqueeze(0).float()
+        coor_hr_w = torch.arange(0, torch.round(w * scale2).int(), 1).unsqueeze(0).float()
 
         ## coordinates in LR space
-        coor_h = ((coor_hr[0] + 0.5) / scale) - (torch.floor((coor_hr[0] + 0.5) / scale + 1e-3)) - 0.5
+        coor_h = ((coor_hr_h + 0.5) / scale) - (torch.floor((coor_hr_h + 0.5) / scale + 1e-3)) - 0.5
         coor_h = coor_h.permute(1, 0)
-        coor_w = ((coor_hr[1] + 0.5) / scale2) - (torch.floor((coor_hr[1] + 0.5) / scale2 + 1e-3)) - 0.5
+        coor_w = ((coor_hr_w + 0.5) / scale2) - (torch.floor((coor_hr_w + 0.5) / scale2 + 1e-3)) - 0.5
 
         input = torch.cat((
-            torch.ones_like(coor_h).expand([-1, round(scale2 * w)]).unsqueeze(0) / scale2,
-            torch.ones_like(coor_h).expand([-1, round(scale2 * w)]).unsqueeze(0) / scale,
-            coor_h.expand([-1, round(scale2 * w)]).unsqueeze(0),
-            coor_w.expand([round(scale * h), -1]).unsqueeze(0)
+            torch.ones_like(coor_h).expand([-1, torch.round(scale2 * w).int()]).unsqueeze(0) / scale2,
+            torch.ones_like(coor_h).expand([-1, torch.round(scale2 * w).int()]).unsqueeze(0) / scale,
+            coor_h.expand([-1, torch.round(scale2 * w).int()]).unsqueeze(0),
+            coor_w.expand([torch.round(scale * h).int(), -1]).unsqueeze(0)
         ), 0).unsqueeze(0)
 
 
@@ -130,19 +128,19 @@ class SA_upsample(nn.Module):
 
         ## filters
         routing_weights = self.routing(embedding)
-        routing_weights = routing_weights.view(self.num_experts, round(scale*h) * round(scale2*w)).transpose(0, 1)      # (h*w) * n
+        routing_weights = routing_weights.view(self.num_experts, torch.round(scale*h).int() * torch.round(scale2*w).int()).transpose(0, 1)      # (h*w) * n
 
         weight_compress = self.weight_compress.view(self.num_experts, -1)
         weight_compress = torch.matmul(routing_weights, weight_compress)
-        weight_compress = weight_compress.view(1, round(scale*h), round(scale2*w), self.channels//8, self.channels)
+        weight_compress = weight_compress.view(1, torch.round(scale*h).int(), torch.round(scale2*w).int(), self.channels//8, self.channels)
 
         weight_expand = self.weight_expand.view(self.num_experts, -1)
         weight_expand = torch.matmul(routing_weights, weight_expand)
-        weight_expand = weight_expand.view(1, round(scale*h), round(scale2*w), self.channels, self.channels//8)
+        weight_expand = weight_expand.view(1, torch.round(scale*h).int(), torch.round(scale2*w).int(), self.channels, self.channels//8)
 
         # (3) grid sample & spatially varying filtering
         ## grid sample
-        fea0 = grid_sample(x, offset, scale, scale2)               ## b * h * w * c * 1
+        fea0 = grid_sample(x, offset, scale, scale2, b, h, w)               ## b * h * w * c * 1
         fea = fea0.unsqueeze(-1).permute(0, 2, 3, 1, 4)            ## b * h * w * c * 1
 
         ## spatially varying filtering
@@ -233,12 +231,11 @@ class SA_conv(nn.Module):
         return out
 
 
-def grid_sample(x, offset, scale, scale2):
+def grid_sample(x, offset, scale, scale2, b, h, w):
     # generate grids
-    b, _, h, w = x.size()
-    grid = np.meshgrid(range(round(scale2*w)), range(round(scale*h)))
-    grid = np.stack(grid, axis=-1).astype(np.float64)
-    grid = torch.Tensor(grid).to(x.device)
+    grid = torch.meshgrid(torch.arange(torch.round(scale2*w).int()), torch.arange(torch.round(scale*h).int()), indexing='xy')
+    grid = torch.stack(grid, axis=2).float()
+
 
     # project into LR space
     grid[:, :, 0] = (grid[:, :, 0] + 0.5) / scale2 - 0.5
@@ -319,24 +316,26 @@ class ArbRCAN(nn.Module):
         self.scale = scale
         self.scale2 = scale2
 
-    def forward(self, x):
+    def forward(self, x, scale, scale2, b, h, w):
         # head
         x = self.sub_mean(x)
         x = self.head(x)
 
         # body
         res = x
+        # for i in range(min(1, self.n_resgroups)):
         for i in range(self.n_resgroups):
             res = self.body[i](res)
             # scale-aware feature adaption
             if (i+1) % self.K == 0:
-                res = self.sa_adapt[i](res, self.scale, self.scale2)
+                res = self.sa_adapt[i](res, scale, scale2)
 
         res = self.body[-1](res)
         res += x
 
         # scale-aware upsampling
-        res = self.sa_upsample(res, self.scale, self.scale2)
+        res = self.sa_upsample(res, scale, scale2, b, h, w)
+        # return res
 
         # tail
         x = self.tail[1](res)
