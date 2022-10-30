@@ -10,7 +10,7 @@ import PIL.Image
 import cog
 
 
-class Predictor(cog.Predictor):
+class Predictor(cog.BasePredictor):
     def setup(self):
         self.device = torch.device('cuda:0')
         self.args = get_args()
@@ -21,22 +21,12 @@ class Predictor(cog.Predictor):
         self.model.load_state_dict(ckpt)
         self.model.eval()
 
-    @cog.input(
-        "image",
-        type=Path,
-        help="input image",
-    )
-    @cog.input(
-        "target_width",
-        type=int,
-        help="width of the target image, set 1-4 times of the input width",
-    )
-    @cog.input(
-        "target_height",
-        type=int,
-        help="height of the target image, set 1-4 times of the input height",
-    )
-    def predict(self, image, target_width, target_height):
+    def predict(
+        self,
+        image: cog.Path = cog.Input(description="input image"),
+        target_width: int = cog.Input(description="width of the target image, set 1-4 times of the input width"),
+        target_height: int = cog.Input(description="height of the target image, set 1-4 times of the input height"),
+        ) -> cog.Path:
         # load lr image
 
         input_path = str(image)
@@ -83,8 +73,7 @@ class Predictor(cog.Predictor):
             sr = sr[0, ...].permute(1, 2, 0).cpu().numpy()
             out_path = Path(tempfile.mkdtemp()) / "out.png"
             imageio.imsave(str(out_path), sr)
-            imageio.imsave('ooo.png', sr)
-        return out_path
+        return cog.Path(out_path)
 
 
 def get_args():
