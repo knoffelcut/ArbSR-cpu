@@ -1,5 +1,5 @@
 import torch
-import utility
+import signal_processing
 import argparse
 from model.arbrcan import ArbRCAN
 import imageio
@@ -78,7 +78,7 @@ class Predictor(cog.Predictor):
             self.model.set_scale(scale, scale2)
             sr = self.model(lr)
 
-            sr = utility.quantize(sr, self.args.rgb_range)
+            sr = signal_processing.quantize(sr, self.args.rgb_range)
             sr = sr.data.mul(255 / self.args.rgb_range)
             sr = sr[0, ...].permute(1, 2, 0).cpu().numpy()
             out_path = Path(tempfile.mkdtemp()) / "out.png"

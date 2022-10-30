@@ -1,5 +1,5 @@
 import torch
-import utility
+import signal_processing
 import skimage.io
 from option import args
 from model.arbrcan import ArbRCAN
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         model.set_scale(scale, scale2)
         sr = model(lr)
 
-        sr = utility.quantize(sr, args.rgb_range)
+        sr = signal_processing.quantize(sr, args.rgb_range)
         sr = sr.data.mul(255 / args.rgb_range)
         sr = sr[0, ...].permute(1, 2, 0).cpu().numpy()
         filename = 'experiment/quick_test/results/{}x{}'.format(int(args.sr_size[0]), int(args.sr_size[1]))

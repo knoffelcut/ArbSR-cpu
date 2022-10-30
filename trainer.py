@@ -3,8 +3,8 @@ import math
 import matplotlib
 matplotlib.use('TKAgg')
 import utility
+import signal_processing
 import torch
-import numpy as np
 from decimal import Decimal
 
 
@@ -128,15 +128,15 @@ class Trainer():
                     sr = self.model(lr)
 
                     # evaluation
-                    sr = utility.quantize(sr, self.args.rgb_range)
+                    sr = signal_processing.quantize(sr, self.args.rgb_range)
                     save_list = [sr]
 
                     if not no_eval:
-                        eval_psnr += utility.calc_psnr(
+                        eval_psnr += signal_processing.calc_psnr(
                             sr, hr, [scale, scale2], self.args.rgb_range,
                             benchmark=self.loader_test.dataset.benchmark
                         )
-                        eval_ssim += utility.calc_ssim(
+                        eval_ssim += signal_processing.calc_ssim(
                             sr, hr, [scale, scale2],
                             benchmark=self.loader_test.dataset.benchmark
                         )
