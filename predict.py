@@ -12,9 +12,9 @@ import cog
 
 class Predictor(cog.BasePredictor):
     def setup(self):
-        self.device = torch.device('cuda:0')
+        self.device = torch.device('cpu')
         self.args = get_args()
-        self.args.n_GPUs = 1
+        self.args.n_GPUs = 0
         self.args.resume = 150
         self.model = ArbRCAN(self.args).to(self.device)
         ckpt = torch.load('experiment/ArbRCAN/model/model_' + str(self.args.resume) + '.pt', map_location=self.device)
