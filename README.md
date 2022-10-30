@@ -1,6 +1,18 @@
 # ArbSR
 Pytorch implementation of "Learning A Single Network for Scale-Arbitrary Super-Resolution", ICCV 2021
 
+This is a fork of the original repo [ArbSR](https://github.com/The-Learning-And-Vision-Atelier-LAVA/ArbSR),
+update and modified to build a CPU Replicate cog container, instead of a GPU model.
+
+In some specific cases a CPU model may be preferred over a GPU model:
+
+- All deployment platforms may not have a GPU available.
+- Environment where runtime is not important.
+- When upscaling to relatively large resolutions (QHD).
+	In such cases a 8GiB GPU tends to run out of memory, however:
+	- The System RAM tends to be higher than the available GPU RAM.
+	- The CPU model tends to use significantly less RAM.
+
 
 [[Project]](https://longguangwang.github.io/Project/ArbSR/) [[arXiv]](https://arxiv.org/abs/2004.03791) [[Replicate Demo and Docker Image]](https://replicate.ai/longguangwang/arbsr)
 
